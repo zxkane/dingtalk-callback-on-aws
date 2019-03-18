@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  dingtalk-callback
+
+  Callback endpoints of dingtalk's approval processes
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: java8
+    Timeout: 90
+    MemorySize: 256
+
+Resources:
+  CallbackFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: build/libs/dingtalk-callback-1.0.0-SNAPSHOT-all.jar
+      Handler: com.github.zxkane.dingtalk.Callback::handleRequest
+      Environment:
+        Variables:
+          DD_TOKEN: {{ $DD_TOKEN }}
+          DD_AES_KEY: {{ $DD_AES_KEY }}
+          DD_CORPID: {{ $DD_CORPID }}
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /dingtalk
+            Method: post
+            RestApiId:
+              Ref: CallbackApi
+
+  CallbackApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: v1
+      EndpointConfiguration: REGIONAL
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: "Dingtalk Callback API"
+        paths:
+          /dingtalk:
+            post:
+              parameters:
+                - name: "timestamp"
+                  in: "query"
+                  required: true
+                  type: "string"
+                - name: "nonce"
+                  in: "query"
+                  required: true
+                  type: "string"
+                - name: "signature"
+                  in: "query"
+                  required: true
+                  type: "string"
+              x-amazon-apigateway-request-validator: "Validate query string parameters and headers"
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CallbackFunction.Arn}/invocations
+                responses: {}
+                httpMethod: "POST"
+                type: "aws_proxy"
+        x-amazon-apigateway-request-validators:
+          Validate query string parameters and headers:
+            validateRequestParameters: true
+            validateRequestBody: false

@@ -1,0 +1,17 @@
+/bin/
+/out/
+.gradle/
+build/
+.classpath
+.project
+.java-version
+src/main/resources/static/*
+src/main/resources/rebel.xml
+.gradletasknamecache
+rebel.xml
+.idea/
+.setting/
+template.yml
+LOG_PATH_IS_UNDEFINED
+.kotlintest/
+*.yaml

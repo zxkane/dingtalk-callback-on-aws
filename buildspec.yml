@@ -1,0 +1,30 @@
+version: 0.2
+
+env:
+  variables:
+    s3_bucket: "deploy-bucket"
+
+phases:
+  install:
+    commands:
+      - echo Nothing to do in the install phase...
+  pre_build:
+    commands:
+      - echo Nothing to do in the pre_build phase...
+      - gradle clean
+  build:
+    commands:
+      - echo Build started on `date`
+      - gradle build
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - aws cloudformation package --output-template-file packaged.yaml --s3-bucket $s3_bucket --template-file template-sam.yaml
+artifacts:
+  files:
+    - packaged.yaml
+  discard-paths: yes
+cache:
+  paths:
+    - '/root/.m2/**/*'
+    - '/root/.gradle/caches/modules-2/files-2.1/**/*'
