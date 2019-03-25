@@ -51,6 +51,7 @@ val test by tasks.getting(Test::class) {
 repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
 }
 
 dependencies {

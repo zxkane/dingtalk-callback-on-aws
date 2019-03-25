@@ -11,11 +11,11 @@ phases:
   pre_build:
     commands:
       - echo Nothing to do in the pre_build phase...
-      - gradle clean
+      - gradle --no-daemon clean
   build:
     commands:
       - echo Build started on `date`
-      - gradle build
+      - gradle --no-daemon build
   post_build:
     commands:
       - echo Build completed on `date`
