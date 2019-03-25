@@ -50,13 +50,7 @@ val test by tasks.getting(Test::class) {
 
 repositories {
     mavenLocal()
-
-    maven(url = uri("http://maven.aliyun.com/nexus/content/groups/public"))
-    maven(url = "http://maven.aliyun.com/mvn/repository/")
-    maven(url = "http://repo.spring.io/release")
-    jcenter()
     mavenCentral()
-    maven(url = uri("https://dl.bintray.com/s1m0nw1/KtsRunner"))
 }
 
 dependencies {
