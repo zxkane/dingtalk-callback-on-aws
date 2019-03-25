@@ -8,9 +8,10 @@ It is written by Kotlin, and leverages below AWS services,
 - [DynamoDB](https://aws.amazon.com/dynamodb/)
 - [CloudFormation](https://aws.amazon.com/cloudformation/)
 - [API Gateway](https://aws.amazon.com/api-gateway/)
-- [Code Pipeline](https://aws.amazon.com/codepipeline/)
+- [CodePipeline](https://aws.amazon.com/codepipeline/)
 - [Systems Manager](https://aws.amazon.com/systems-manager/)
 - [S3](https://aws.amazon.com/s3/)
+- [CloudWatch](https://aws.amazon.com/cloudwatch/)
 
 ### How to deploy this program
 
