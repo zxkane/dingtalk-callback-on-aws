@@ -33,9 +33,7 @@ Resources:
            - Effect: Allow
              Action:
                - ssm:GetParameters
-               - ssm:DescribeParameters
-               - ssm:GetParameter
-             Resource: 'arn:aws:ssm:::parameter/DD_*'
+             Resource: 'arn:aws:ssm:*:*:parameter/DD_*' # align with below below keys stored in parameter store
       Environment:
         Variables:
           PARA_DD_TOKEN: DD_TOKEN

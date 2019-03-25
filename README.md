@@ -12,6 +12,7 @@ It is written by Kotlin, and leverages below AWS services,
 - [Systems Manager](https://aws.amazon.com/systems-manager/)
 - [S3](https://aws.amazon.com/s3/)
 - [CloudWatch](https://aws.amazon.com/cloudwatch/)
+- [KMS](https://aws.amazon.com/kms/)
 
 ### How to deploy this program
 
