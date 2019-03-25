@@ -28,11 +28,19 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref BPMTable
+        - Version: '2012-10-17' # Policy Document
+          Statement:
+           - Effect: Allow
+             Action:
+               - ssm:GetParameters
+               - ssm:DescribeParameters
+               - ssm:GetParameter
+             Resource: 'arn:aws:ssm:::parameter/DD_*'
       Environment:
         Variables:
-          DD_TOKEN: {{ $DD_TOKEN }}
-          DD_AES_KEY: {{ $DD_AES_KEY }}
-          DD_CORPID: {{ $DD_CORPID }}
+          PARA_DD_TOKEN: DD_TOKEN
+          PARA_DD_AES_KEY: DD_AES_KEY
+          PARA_DD_CORPID: DD_CORPID
           TABLE_NAME: !Ref BPMTable
       Events:
         HelloWorld:

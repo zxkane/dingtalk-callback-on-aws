@@ -16,7 +16,7 @@ class CallbackTests : AbstractTest() {
         }
 
         "check-url callback request" {
-            val encryptedMap = Callback.dingTalkEncryptor.getEncryptedMap(
+            val encryptedMap = callback.dingTalkEncryptor.getEncryptedMap(
                 """
                     {
                         "EventType" : "check_url"

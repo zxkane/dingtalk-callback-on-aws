@@ -11,12 +11,18 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.dingtalk.oapi.lib.aes.Utils
 import com.github.zxkane.dingtalk.*
+import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.whenever
 import io.kotlintest.Spec
 import io.kotlintest.extensions.TopLevelTest
 import io.kotlintest.specs.StringSpec
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.Mockito.mock
+import software.amazon.awssdk.services.ssm.SsmClient
+import software.amazon.awssdk.services.ssm.model.GetParametersRequest
+import software.amazon.awssdk.services.ssm.model.GetParametersResponse
+import software.amazon.awssdk.services.ssm.model.Parameter
 import java.io.IOException
 import java.net.ServerSocket
 import java.util.*
@@ -72,6 +78,8 @@ abstract class AbstractTest : StringSpec() {
     lateinit var dynamoDBClient: AmazonDynamoDB
     lateinit var callback: Callback
 
+    private val CORP = "mycorp"
+
     override fun beforeSpecClass(spec: Spec, tests: List<TopLevelTest>) {
         super.beforeSpecClass(spec, tests)
         //Need to set the SQLite4Java library path to avoid a linker error
@@ -84,7 +92,15 @@ abstract class AbstractTest : StringSpec() {
         dynamoDBProxyServer.start()
 
         dynamoDBClient = createAmazonDynamoDBClient()
-        callback = Callback(DynamoDB(dynamoDBClient))
+
+        val ssmClient = mock<SsmClient>()
+        whenever(ssmClient.getParameters(ArgumentMatchers.any(GetParametersRequest::class.java)))
+            .thenReturn(GetParametersResponse.builder().parameters(
+                Parameter.builder().name(token).value(token).build(),
+                Parameter.builder().name(aesKey).value(aesKey).build(),
+                Parameter.builder().name(CORP).value(CORP).build()
+            ).build())
+        callback = Callback(DynamoDB(dynamoDBClient), ssmClient)
     }
 
     override fun afterSpec(spec: Spec) {
@@ -93,7 +109,7 @@ abstract class AbstractTest : StringSpec() {
     }
 
     fun init() {
-        setEnv(mapOf(TOKEN_NAME to token, AES_KEY_NAME to aesKey, CORPID_NAME to "mycorp",
+        setEnv(mapOf(TOKEN_NAME to token, AES_KEY_NAME to aesKey, CORPID_NAME to CORP,
             TABLE_NAME to "table-name"))
         whenever(context.logger).thenReturn(mock(LambdaLogger::class.java))
     }

@@ -16,13 +16,16 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.apache.commons.codec.binary.Base64
 import org.apache.logging.log4j.LogManager
+import software.amazon.awssdk.services.ssm.SsmClient
+import software.amazon.awssdk.services.ssm.model.GetParametersRequest
+import software.amazon.awssdk.services.ssm.model.Parameter
 import java.time.ZonedDateTime
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.javaType
 
-const val TOKEN_NAME = "DD_TOKEN"
-const val AES_KEY_NAME = "DD_AES_KEY"
-const val CORPID_NAME = "DD_CORPID"
+const val TOKEN_NAME = "PARA_DD_TOKEN"
+const val AES_KEY_NAME = "PARA_DD_AES_KEY"
+const val CORPID_NAME = "PARA_DD_CORPID"
 
 const val QUERY_PARAMETER_SIGNATURE = "signature"
 const val QUERY_PARAMETER_TIMESTAMP = "timestamp"
@@ -37,14 +40,11 @@ const val STATUS_CODE = 200
 
 val objectMapper = ObjectMapper().registerModules(JavaTimeModule()).registerKotlinModule()
 
-class Callback(dynamoDb: DynamoDB? = null) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     companion object {
 
         internal val logger = LogManager.getLogger(Callback::class.java)
-        internal val dingTalkEncryptor = DingTalkEncryptor(System.getenv(TOKEN_NAME),
-            System.getenv(AES_KEY_NAME),
-            System.getenv(CORPID_NAME))
 
         init {
             objectMapper.disable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS)
@@ -52,9 +52,23 @@ class Callback(dynamoDb: DynamoDB? = null) : RequestHandler<APIGatewayProxyReque
     }
 
     var dynamoDb: DynamoDB
+    var dingTalkEncryptor: DingTalkEncryptor
 
     init {
         this.dynamoDb = dynamoDb ?: DynamoDB(AmazonDynamoDBClientBuilder.defaultClient())
+        val ssmClient = ssmclient ?: SsmClient.builder().build()
+        val dingtalkParameters = ssmClient.getParameters(GetParametersRequest.builder().names(
+            System.getenv(TOKEN_NAME),
+            System.getenv(AES_KEY_NAME),
+            System.getenv(CORPID_NAME)).withDecryption(true).build()).parameters()
+         dingTalkEncryptor = DingTalkEncryptor(
+             getParameter(dingtalkParameters, System.getenv(TOKEN_NAME)),
+             getParameter(dingtalkParameters, System.getenv(AES_KEY_NAME)),
+             getParameter(dingtalkParameters, System.getenv(CORPID_NAME)))
+    }
+
+    private fun getParameter(parameters: List<Parameter>, name: String): String {
+        return parameters.first { p -> p.name() == name }.value()
     }
 
     override fun handleRequest(request: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {

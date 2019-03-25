@@ -18,6 +18,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt") version detektVersion
     id("com.github.johnrengelman.shadow") version "5.0.0"
     id("de.sebastianboegl.shadow.transformer.log4j") version "2.1.1"
+    id("io.spring.dependency-management") version "1.0.7.RELEASE"
 }
 
 group = "com.github.zxkane"
@@ -85,6 +86,7 @@ dependencies {
     implementation("commons-codec:commons-codec:1.11")
     compile(files("lib/lippi-oapi-encrpt.jar"))
 
+    implementation("software.amazon.awssdk:ssm")
     implementation("com.amazonaws:aws-java-sdk-dynamodb:1.11.519")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junit5Version}")
@@ -97,6 +99,12 @@ dependencies {
     testImplementation("com.amazonaws:DynamoDBLocal:1.11.477")
 
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${detektVersion}")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom("software.amazon.awssdk:bom:2.5.15")
+    }
 }
 
 tasks.wrapper {
