@@ -30,7 +30,16 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+tasks.register<Copy>("copyNativeDeps") {
+    from(configurations.compile.get().plus(configurations.testCompile)) {
+        include("*.dll", "*.dylib", "*.so")
+    }
+    into("build/libs")
+}
+
 val test by tasks.getting(Test::class) {
+    dependsOn("copyNativeDeps")
+    systemProperty("java.library.path", "build/libs")
     useJUnitPlatform()
     testLogging {
         // set options for log level LIFECYCLE
@@ -44,7 +53,6 @@ val test by tasks.getting(Test::class) {
         showExceptions = true
         showCauses = true
         showStackTraces = true
-
     }
 }
 
@@ -52,6 +60,10 @@ repositories {
     mavenLocal()
     mavenCentral()
     jcenter()
+    maven(
+        //Local DynamoDB repository
+        url = "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
+    )
 }
 
 dependencies {
@@ -82,6 +94,7 @@ dependencies {
     }
     testCompile("org.mockito:mockito-core:2.23.+")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.1.0")
+    testImplementation("com.amazonaws:DynamoDBLocal:1.11.477")
 
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${detektVersion}")
 }

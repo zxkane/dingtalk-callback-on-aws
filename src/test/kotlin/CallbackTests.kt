@@ -10,8 +10,6 @@ class CallbackTests : AbstractTest() {
     init {
         super.init()
 
-        val callback = com.github.zxkane.dingtalk.Callback()
-
         "env init" {
             System.getenv(TOKEN_NAME) shouldBe token
             System.getenv(AES_KEY_NAME) shouldBe aesKey

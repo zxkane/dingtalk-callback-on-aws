@@ -1,5 +1,9 @@
 package com.github.zxkane.dingtalk
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
+import com.amazonaws.services.dynamodbv2.document.DynamoDB
+import com.amazonaws.services.dynamodbv2.document.Item
+import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
@@ -12,6 +16,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.apache.commons.codec.binary.Base64
 import org.apache.logging.log4j.LogManager
+import java.time.ZonedDateTime
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.javaType
 
 const val TOKEN_NAME = "DD_TOKEN"
 const val AES_KEY_NAME = "DD_AES_KEY"
@@ -21,11 +28,7 @@ const val QUERY_PARAMETER_SIGNATURE = "signature"
 const val QUERY_PARAMETER_TIMESTAMP = "timestamp"
 const val QUERY_PARAMETER_NONCE = "nonce"
 
-const val BPM_TABLE_NAME = "bpm_raw"
-const val BPM_TABLE_PRIMARY_KEY_NAME = "processInstanceId"
-
-const val ORG_TABLE_NAME = "org_raw"
-const val ORG_TABLE_PRIMARY_KEY_NAME = "eventType"
+const val TABLE_NAME = "TABLE_NAME"
 
 const val RESPONSE_MSG = "success"
 
@@ -34,18 +37,24 @@ const val STATUS_CODE = 200
 
 val objectMapper = ObjectMapper().registerModules(JavaTimeModule()).registerKotlinModule()
 
-class Callback : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+class Callback(dynamoDb: DynamoDB? = null) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     companion object {
 
         internal val logger = LogManager.getLogger(Callback::class.java)
-        val dingTalkEncryptor = DingTalkEncryptor(System.getenv(TOKEN_NAME),
+        internal val dingTalkEncryptor = DingTalkEncryptor(System.getenv(TOKEN_NAME),
             System.getenv(AES_KEY_NAME),
             System.getenv(CORPID_NAME))
 
         init {
             objectMapper.disable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS)
         }
+    }
+
+    var dynamoDb: DynamoDB
+
+    init {
+        this.dynamoDb = dynamoDb ?: DynamoDB(AmazonDynamoDBClientBuilder.defaultClient())
     }
 
     override fun handleRequest(request: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
@@ -74,6 +83,7 @@ class Callback : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResp
             }
             "bpms_instance_change", "bpms_task_change" -> {
                 logger.debug("BPM $event is received.")
+                serializeEvent(event)
             }
             "user_add_org", "user_modify_org", "user_leave_org", "org_admin_add",
                 "org_admin_remove", "org_dept_create", "org_dept_modify", "org_dept_remove",
@@ -94,5 +104,32 @@ class Callback : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResp
             .withBody(objectMapper.writeValueAsString(response))
             .withHeaders(mapOf("content-type" to "application/json"))
             .withStatusCode(STATUS_CODE)
+    }
+
+    private fun serializeEvent(event: Event) {
+        val item = Item()
+
+        event.javaClass.kotlin.declaredMemberProperties.forEach { prop ->
+            when (prop.returnType.javaType.typeName) {
+                String::class.java.typeName -> {
+                    val value = prop.get(event) as String?
+                    item.withString(prop.name, value ?: "null")
+                }
+                "java.util.List<java.lang.String>" -> {
+                    val value = prop.get(event) as List<*>?
+                    item.withList(prop.name, value)
+                }
+                Long::class.java.typeName -> {
+                    item.withLong(prop.name, prop.get(event) as Long)
+                }
+                ZonedDateTime::class.java.typeName -> {
+                    val value = prop.get(event) as ZonedDateTime?
+                    item.withString(prop.name, value?.toLocalDateTime().toString())
+                }
+                else -> logger.warn("Unrecognized prop '${prop.name}' with type ${prop.returnType}.")
+            }
+        }
+
+        dynamoDb.getTable(System.getProperty(TABLE_NAME)!!).putItem(PutItemSpec().withItem(item))
     }
 }

@@ -13,16 +13,27 @@ Globals:
     MemorySize: 256
 
 Resources:
+  BPMTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+          Name: processInstanceId
+          Type: String
+      TableName: bpm_raw
   CallbackFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: build/libs/dingtalk-callback-1.0.0-SNAPSHOT-all.jar
       Handler: com.github.zxkane.dingtalk.Callback::handleRequest
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BPMTable
       Environment:
         Variables:
           DD_TOKEN: {{ $DD_TOKEN }}
           DD_AES_KEY: {{ $DD_AES_KEY }}
           DD_CORPID: {{ $DD_CORPID }}
+          TABLE_NAME: !Ref BPMTable
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
