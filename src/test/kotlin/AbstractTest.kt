@@ -110,7 +110,8 @@ abstract class AbstractTest : StringSpec() {
 
     fun init() {
         setEnv(mapOf(TOKEN_NAME to token, AES_KEY_NAME to aesKey, CORPID_NAME to CORP,
-            TABLE_NAME to "table-name"))
+            TABLE_NAME to "table-name", "AWS_ACCESS_KEY_ID" to Utils.getRandomStr(8),
+            "AWS_SECRET_KEY" to Utils.getRandomStr(16)))
         whenever(context.logger).thenReturn(mock(LambdaLogger::class.java))
     }
 
