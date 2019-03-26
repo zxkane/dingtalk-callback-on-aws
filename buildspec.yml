@@ -26,5 +26,5 @@ artifacts:
   discard-paths: yes
 cache:
   paths:
-    - '/root/.m2/**/*'
-    - '/root/.gradle/caches/modules-2/files-2.1/**/*'
+    - /$HOME/.gradle/caches/
+    - /$HOME/.gradle/wrapper/
