@@ -7,6 +7,8 @@ import io.kotlintest.data.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.tables.row
 import org.apache.commons.codec.binary.Base64
+import java.time.Instant
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -53,7 +55,13 @@ class CallbackTests : AbstractTest() {
                     "title", "bpm-type", "staff-22222", null, "222", "http://11.com")),
                 row(Event.BPMEvent("bpmEvent", 0, "code-xxx",
                     "instance-2222", "corpId", ZonedDateTime.now(), null, "categoryId",
-                    "title", "bpm-type", "staff-22222", null, null, null))
+                    "title", "bpm-type", "staff-22222", null, null, null)),
+                row(Event.BPMEvent("bpms_instance_change", 0, "PROC-B508DB8F-EAD6-4E89-8DEC-92109D804FA9",
+                    "b1a3eb42-3ba6-4c9a-bf6f-27869cd4b971", "ding07511073f402a4e035c2f4657eb6378f",
+                    ZonedDateTime.ofInstant(Instant.ofEpochMilli(1553564588000L), ZoneOffset.UTC),
+                    ZonedDateTime.ofInstant(Instant.ofEpochMilli(1553578330000L), ZoneOffset.UTC),
+                    "", "xxx提交的费用报销", "finish", "manager686",
+                    "agree", null, "https://aflow.dingtalk.com/dingtalk/mobile/homepage.htm"))
             ) { event ->
                 callback.serializeEvent(event)
 

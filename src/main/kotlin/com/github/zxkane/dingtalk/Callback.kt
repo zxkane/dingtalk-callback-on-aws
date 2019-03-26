@@ -127,7 +127,7 @@ class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : Reque
             when (prop.returnType.javaType.typeName) {
                 String::class.java.typeName -> {
                     val value = prop.get(event) as String?
-                    item.withString(prop.name, value ?: "null")
+                    item.withString(prop.name, if (value != null && value.isNotEmpty()) value else "null")
                 }
                 "java.util.List<java.lang.String>" -> {
                     val value = prop.get(event) as List<*>?

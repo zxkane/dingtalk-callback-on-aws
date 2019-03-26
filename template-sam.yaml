@@ -9,7 +9,7 @@ Description: >
 Globals:
   Function:
     Runtime: java8
-    Timeout: 90
+    Timeout: 29
     MemorySize: 384
 
 Resources:
