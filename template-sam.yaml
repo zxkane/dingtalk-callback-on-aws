@@ -10,7 +10,7 @@ Globals:
   Function:
     Runtime: java8
     Timeout: 90
-    MemorySize: 256
+    MemorySize: 384
 
 Resources:
   BPMTable:
