@@ -2,11 +2,10 @@
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.dynamodbv2.local.main.ServerRunner
 import com.amazonaws.services.dynamodbv2.local.server.DynamoDBProxyServer
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
+import com.amazonaws.services.dynamodbv2.model.*
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.dingtalk.oapi.lib.aes.Utils
@@ -75,7 +74,7 @@ abstract class AbstractTest : StringSpec() {
     val timestamp = System.currentTimeMillis()
     lateinit var dynamoDBProxyServer: DynamoDBProxyServer
     val dynamoDBPort = getAvailablePort()
-    lateinit var dynamoDBClient: AmazonDynamoDB
+    lateinit var dynamoDB: DynamoDB
     lateinit var callback: Callback
 
     private val CORP = "mycorp"
@@ -91,7 +90,8 @@ abstract class AbstractTest : StringSpec() {
         dynamoDBProxyServer = ServerRunner.createServerFromCommandLineArgs(localArgs)
         dynamoDBProxyServer.start()
 
-        dynamoDBClient = createAmazonDynamoDBClient()
+        dynamoDB = DynamoDB(createAmazonDynamoDBClient())
+        createTables(dynamoDB)
 
         val ssmClient = mock<SsmClient>()
         whenever(ssmClient.getParameters(ArgumentMatchers.any(GetParametersRequest::class.java)))
@@ -100,7 +100,7 @@ abstract class AbstractTest : StringSpec() {
                 Parameter.builder().name(aesKey).value(aesKey).build(),
                 Parameter.builder().name(CORP).value(CORP).build()
             ).build())
-        callback = Callback(DynamoDB(dynamoDBClient), ssmClient)
+        callback = Callback(dynamoDB, ssmClient)
     }
 
     override fun afterSpec(spec: Spec) {
@@ -121,12 +121,15 @@ abstract class AbstractTest : StringSpec() {
             .build()
     }
 
-    private fun createMyTables(client: AmazonDynamoDB) {
-        //Create task tables
-        val mapper = DynamoDBMapper(client)
-        val tableRequest = mapper.generateCreateTableRequest(Event.BPMEvent::class.java)
-        tableRequest.provisionedThroughput = ProvisionedThroughput(1L, 1L)
-        client.createTable(tableRequest)
-
+    private fun createTables(client: DynamoDB) {
+        //Create bpm tables
+        val table = client.createTable(CreateTableRequest().withTableName(System.getenv(TABLE_NAME))
+            .withKeySchema(KeySchemaElement().withAttributeName("processInstanceId")
+                .withKeyType(KeyType.HASH))
+            .withAttributeDefinitions(AttributeDefinition().withAttributeName("processInstanceId")
+                .withAttributeType(ScalarAttributeType.S))
+            .withProvisionedThroughput(ProvisionedThroughput().withReadCapacityUnits(10L)
+                .withWriteCapacityUnits(10L)))
+        table.waitForActive()
     }
 }

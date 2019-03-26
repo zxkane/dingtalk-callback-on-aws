@@ -1,9 +1,16 @@
 
 
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.github.zxkane.dingtalk.*
+import io.kotlintest.data.forall
 import io.kotlintest.shouldBe
+import io.kotlintest.tables.row
 import org.apache.commons.codec.binary.Base64
+import java.time.ZonedDateTime
+import java.util.*
+
+
 
 class CallbackTests : AbstractTest() {
 
@@ -37,6 +44,29 @@ class CallbackTests : AbstractTest() {
                 .withIsBase64Encoded(true)
 
             callback.handleRequest(apiRequest, context)
+        }
+
+        "serialize bpm events" {
+            forall(
+                row(Event.BPMEvent("bpmEvent", 0, "code-xxx",
+                    "instance-yyyy", "corpId", ZonedDateTime.now(), ZonedDateTime.now(), "categoryId",
+                    "title", "bpm-type", "staff-22222", null, "222", "http://11.com")),
+                row(Event.BPMEvent("bpmEvent", 0, "code-xxx",
+                    "instance-2222", "corpId", ZonedDateTime.now(), null, "categoryId",
+                    "title", "bpm-type", "staff-22222", null, null, null))
+            ) { event ->
+                callback.serializeEvent(event)
+
+                val nameMap = HashMap<String, String>()
+                nameMap["#id"] = "processInstanceId"
+
+                val valueMap = HashMap<String, Any>()
+                valueMap[":id"] = event.processInstanceId
+
+                val querySpec = QuerySpec().withKeyConditionExpression("#id = :id").withNameMap(nameMap)
+                    .withValueMap(valueMap)
+                dynamoDB.getTable(System.getenv(TABLE_NAME)).query(querySpec).count() shouldBe 1
+            }
         }
 
     }

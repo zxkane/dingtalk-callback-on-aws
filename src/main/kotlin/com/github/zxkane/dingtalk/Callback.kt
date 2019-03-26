@@ -120,7 +120,7 @@ class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : Reque
             .withStatusCode(STATUS_CODE)
     }
 
-    private fun serializeEvent(event: Event) {
+    fun serializeEvent(event: Event) {
         val item = Item()
 
         event.javaClass.kotlin.declaredMemberProperties.forEach { prop ->
@@ -144,6 +144,6 @@ class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : Reque
             }
         }
 
-        dynamoDb.getTable(System.getProperty(TABLE_NAME)!!).putItem(PutItemSpec().withItem(item))
+        dynamoDb.getTable(System.getenv(TABLE_NAME)!!).putItem(PutItemSpec().withItem(item))
     }
 }

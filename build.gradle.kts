@@ -87,6 +87,7 @@ dependencies {
     compile(files("lib/lippi-oapi-encrpt.jar"))
 
     implementation("software.amazon.awssdk:ssm")
+    implementation("org.slf4j:slf4j-simple:1.7.25")
     implementation("com.amazonaws:aws-java-sdk-dynamodb:1.11.519")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junit5Version}")
@@ -94,16 +95,16 @@ dependencies {
     testCompile("io.kotlintest:kotlintest-runner-junit5:${kotlinTestVersion}"){
         exclude("org.jetbrains.kotlin")
     }
-    testCompile("org.mockito:mockito-core:2.23.+")
+    testImplementation("org.mockito:mockito-core:2.23.+")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.1.0")
-    testImplementation("com.amazonaws:DynamoDBLocal:1.11.477")
+    testCompile("com.amazonaws:DynamoDBLocal:1.11.+")
 
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${detektVersion}")
 }
 
 dependencyManagement {
     imports {
-        mavenBom("software.amazon.awssdk:bom:2.5.15")
+        mavenBom("software.amazon.awssdk:bom:2.5.+")
     }
 }
 

@@ -7,14 +7,14 @@ import io.kotlintest.matchers.string.shouldContain
 import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
+import io.kotlintest.specs.StringSpec
 import io.kotlintest.tables.row
 import java.time.ZonedDateTime
 
 
-class DingTalkModelTests : AbstractTest() {
+class DingTalkModelTests : StringSpec() {
 
     init {
-        super.init()
         "can deserialize check url event" {
             val eventJson = "{\n" +
                     "    \"EventType\" : \"check_url\"\n" +
