@@ -2,7 +2,7 @@
 
 The program provides a HTTP API endpoint to receive kinds of dingtalk callback events and persist them in AWS DynamoDB, including `BPM events`, `Organization events` and so on.
 
-It is written by Kotlin, and leverages below AWS services,
+It is written by Kotlin and leverages below AWS services,
 
 - [Lambda](https://aws.amazon.com/lambda/)
 - [DynamoDB](https://aws.amazon.com/dynamodb/)
@@ -28,6 +28,7 @@ It is written by Kotlin, and leverages below AWS services,
 
 ```bash
 # build the source
+./gradlew build
 ```
 
 ####  Deploy via SAM cli
