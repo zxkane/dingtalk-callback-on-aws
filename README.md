@@ -1,5 +1,7 @@
 ## A Dingtalk(钉钉) callback on AWS
 
+[![Build Status](https://travis-ci.org/zxkane/dingtalk-callback-on-aws.svg?branch=master)](https://travis-ci.org/zxkane/dingtalk-callback-on-aws)
+
 The program provides a HTTP API endpoint to receive kinds of dingtalk callback events and persist them in AWS DynamoDB, including `BPM events`, `Organization events` and so on.
 
 It is written by Kotlin and leverages below AWS services,
