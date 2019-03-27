@@ -1,0 +1,14 @@
+[
+    {
+    "ParameterKey": "GitHubSecret",
+    "ParameterValue": "<the secret you want to use for the webhook AWS CloudFormation creates>"
+    },
+    {
+    "ParameterKey": "GitHubOAuthToken",
+    "ParameterValue": "<the personal access key for your GitHub repository>"
+    },
+    {
+    "ParameterKey": "ArtifactStoreS3Location",
+    "ParameterValue": "deploy-bucket"
+    }
+  ]

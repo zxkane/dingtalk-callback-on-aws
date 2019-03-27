@@ -1,0 +1,295 @@
+Description: Create a CodePipeline to include Github source, CodeBuild and Lambda deployment.
+
+Parameters:
+  AppBaseName:
+    Type: String
+    Description: App base name
+    Default: dingtalk-callback
+  ArtifactStoreS3Location:
+    Type: String
+    Description: Name of the S3 bucket to store CodePipeline artificat.
+  BranchName:
+    Description: GitHub branch name
+    Type: String
+    Default: master
+  RepositoryName:
+    Description: GitHub repository name
+    Type: String
+    Default: dingtalk-callback-on-aws
+  GitHubOwner:
+    Type: String
+    Default: zxkane
+  GitHubSecret:
+    Type: String
+    NoEcho: true
+  GitHubOAuthToken:
+    Type: String
+    NoEcho: true
+
+Resources:
+  CodePipelineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName:
+        Fn::Sub: CodePipelineRole-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "codepipeline.amazonaws.com"
+                - "cloudformation.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+      Policies:
+        -
+          PolicyName: "CodePipelineAccessPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:DeleteObject"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                  - "s3:ListBucket"
+                  - "s3:PutObject"
+                  - "s3:GetBucketPolicy"
+                Resource:
+                  - Fn::Sub: arn:aws:s3:::${ArtifactStoreS3Location}
+                  - Fn::Sub: arn:aws:s3:::${ArtifactStoreS3Location}/*
+              -
+                Effect: "Allow"
+                Action:
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:DeleteChangeSet"
+                  - "cloudformation:CreateUploadBucket"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:Describe*"
+                  - "cloudformation:List*"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:ValidateTemplate"
+                  - "cloudformation:ExecuteChangeSet"
+                Resource:
+                  - Fn::Sub: arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppBaseName}-lambda-deploy-stack-${AWS::StackName}*
+                  - Fn::Sub: arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+              - Effect: "Allow"
+                Action:
+                  - "codebuild:StartBuild"
+                  - "codebuild:BatchGetBuilds"
+                Resource:
+                  - Fn::Sub: arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${AppBaseName}-build-${AWS::StackName}
+                  - Fn::Sub: arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:build/${AppBaseName}-build-${AWS::StackName}:*
+              - Effect: "Allow"
+                Action:
+                  - "apigateway:*"
+                  - "lambda:*"
+                  - "iam:GetRole"
+                  - "iam:CreateRole"
+                  - "iam:DeleteRole"
+                  - "iam:PutRolePolicy"
+                  - "iam:AttachRolePolicy"
+                  - "iam:DeleteRolePolicy"
+                  - "iam:DetachRolePolicy"
+                  - "iam:PassRole"
+                Resource: "*"
+  CodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName:
+        Fn::Sub: CodeBuildRole-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /service-role/
+      Policies:
+        -
+          PolicyName: "CodeBuildAccessPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource:
+                  - Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                  - "s3:GetBucketAcl"
+                  - "s3:GetBucketLocation"
+                Resource:
+                  - Fn::Sub: arn:aws:s3:::${ArtifactStoreS3Location}/*
+                  - Fn::Sub: arn:aws:s3:::${ArtifactStoreS3Location}
+
+  DingtalkCallbackPipelineWebhook:
+    Type: 'AWS::CodePipeline::Webhook'
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubSecret
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: 'refs/heads/{Branch}'
+      TargetPipeline: !Ref DingtalkCallbackPipeline
+      TargetAction: SourceAction
+      Name: 
+        Fn::Sub: ${AppBaseName}-pipeline-webhook-${AWS::StackName}
+      TargetPipelineVersion: !GetAtt
+        - DingtalkCallbackPipeline
+        - Version
+      RegisterWithThirdParty: true
+
+  BuildDingtalkProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name:
+        Fn::Sub: ${AppBaseName}-build-${AWS::StackName}
+      Description: Build, test, package dingtalk callback project
+      ServiceRole:
+        Fn::GetAtt: [ CodeBuildRole, Arn ]
+      Artifacts:
+        Type: S3
+        Location:
+          Ref: ArtifactStoreS3Location
+        Name:
+          Fn::Sub: ${AppBaseName}-build-${AWS::StackName}
+        NamespaceType: BUILD_ID
+        Path: 
+          Fn::Sub: ${AppBaseName}/artifacts
+        Packaging: NONE
+        OverrideArtifactName: true
+        EncryptionDisabled: true
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/java:openjdk-11
+        PrivilegedMode: false
+        ImagePullCredentialsType: CODEBUILD
+        EnvironmentVariables:
+          - Name: s3_bucket
+            Value:
+              Ref: ArtifactStoreS3Location
+      Source:
+        Location:
+          Fn::Sub: https://github.com/${GitHubOwner}/${RepositoryName}.git
+        Type: GITHUB
+      TimeoutInMinutes: 15
+      QueuedTimeoutInMinutes: 30
+      EncryptionKey:
+        Fn::Sub: arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
+      Tags:
+        - Key: APP
+          Value:
+            Fn::Sub: ${AppBaseName}-${AWS::StackName}
+
+  DingtalkCallbackPipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties:
+      Name:
+        Fn::Sub: ${AppBaseName}-pipeline-${AWS::StackName}
+      RoleArn:
+        Fn::GetAtt: [ CodePipelineRole, Arn ]
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: 
+                    Fn::Sub: ${AppBaseName}-source-changed
+              Configuration:
+                Owner: !Ref GitHubOwner
+                Repo: !Ref RepositoryName
+                Branch: !Ref BranchName
+                OAuthToken: !Ref GitHubOAuthToken
+                PollForSourceChanges: false
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: Build_Test_Package
+              InputArtifacts:
+                - Name:
+                    Fn::Sub: ${AppBaseName}-source-changed
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: 
+                    Fn::Sub: ${AppBaseName}-packaged-yml
+              Configuration:
+                ProjectName:
+                  Ref: BuildDingtalkProject
+              RunOrder: 1
+        - Name: Deploy
+          Actions:
+            - Name: UpdateChangeset
+              InputArtifacts:
+                - Name:
+                    Fn::Sub: ${AppBaseName}-packaged-yml
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CHANGE_SET_REPLACE
+                Capabilities: CAPABILITY_IAM
+                ChangeSetName: 
+                  Fn::Sub: ${AppBaseName}-lambda-deploy-changeset
+                RoleArn:
+                  Fn::GetAtt: [ CodePipelineRole, Arn ]
+                StackName: 
+                  Fn::Sub: ${AppBaseName}-lambda-deploy-stack-${AWS::StackName}
+                TemplatePath: 
+                  Fn::Sub: ${AppBaseName}-packaged-yml::packaged.yaml
+              RunOrder: 1
+              OutputArtifacts:
+                - Name: 
+                    Fn::Sub: ${AppBaseName}-updated-changeset
+            - Name: Deploy
+              InputArtifacts:
+                - Name:
+                    Fn::Sub: ${AppBaseName}-updated-changeset
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName:
+                  Fn::Sub: ${AppBaseName}-lambda-deploy-changeset
+                StackName:
+                  Fn::Sub: ${AppBaseName}-lambda-deploy-stack-${AWS::StackName}
+              RunOrder: 2
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactStoreS3Location
