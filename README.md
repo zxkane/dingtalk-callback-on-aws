@@ -15,6 +15,7 @@ It is written by Kotlin and leverages below AWS services,
 - [S3](https://aws.amazon.com/s3/)
 - [CloudWatch](https://aws.amazon.com/cloudwatch/)
 - [KMS](https://aws.amazon.com/kms/)
+- [IAM](https://aws.amazon.com/iam/)
 
 ### How to deploy this program
 
@@ -46,12 +47,18 @@ sam deploy --template-file ./packaged.yaml \
 ```
 
 #### Deploy via Code pipeline
-TBA
+1. Put the github person token to `codepipeline.json`
+2. Set the s3 bucket name in `codepipeline.json` 
+3. Set any parameter in `codepipeline.json` if necessary, such app name, repo name and branch name
+4. Create a CI/CD pipeline in CodePipeline via below command, which can be continously triggered by new commits of this repo then deploy lambda HTTP endpoint
+```bash
+aws cloudformation create-stack --stack-name dingtalk-mycorp --template-body file://codepipeline.yml --parameters file://codepipeline.json --capabilities CAPABILITY_NAMED_IAM
+```
 
 ### Post deployment actions
 
 1. Get `id of api gateway of AWS` created by above deployment
-1. Use [dingtalk API](https://open-doc.dingtalk.com/microapp/serverapi2/pwz3r5) to register/update this serverless API gateway endpoint as callback of dingtalk events.
+2. Use [dingtalk API](https://open-doc.dingtalk.com/microapp/serverapi2/pwz3r5) to register/update this serverless API gateway endpoint as callback of dingtalk events.
 
 For example,
 

@@ -14,12 +14,20 @@ Globals:
 
 Resources:
   BPMTable:
-    Type: AWS::Serverless::SimpleTable
+    Type: "AWS::DynamoDB::Table"
     Properties:
-      PrimaryKey:
-          Name: processInstanceId
-          Type: String
-      TableName: bpm_raw
+      TableName:
+        Fn::Sub: bpm_raw_${AWS::StackName}
+      KeySchema:
+        - AttributeName: processInstanceId
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: processInstanceId
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: 100
+        WriteCapacityUnits: 100
+
   CallbackFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
