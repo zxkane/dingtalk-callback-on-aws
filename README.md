@@ -49,7 +49,7 @@ sam deploy --template-file ./packaged.yaml \
 #### Deploy via Code pipeline
 1. Put the github person token to `codepipeline.json`
 2. Set the s3 bucket name in `codepipeline.json` 
-3. Set any parameter in `codepipeline.json` if necessary, such app name, repo name and branch name
+3. Set any parameter in `codepipeline.json` if necessary, such as app name, repo name and branch name
 4. Create a CI/CD pipeline in CodePipeline via below command, which can be continously triggered by new commits of this repo then deploy lambda HTTP endpoint
 ```bash
 aws cloudformation create-stack --stack-name dingtalk-mycorp --template-body file://codepipeline.yml --parameters file://codepipeline.json --capabilities CAPABILITY_NAMED_IAM
