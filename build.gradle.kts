@@ -150,6 +150,12 @@ tasks.withType<ShadowJar> {
     transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer::class.java)
 }
 
+tasks.register<Copy>("depsLayer") {
+    into("$buildDir/deps/java/lib")
+    from(configurations.compileClasspath.get())
+    from(configurations.runtimeClasspath.get())
+}
+
 tasks.getByName("build") {
-    finalizedBy("shadowJar")
+    finalizedBy("depsLayer")
 }

@@ -28,11 +28,24 @@ Resources:
         ReadCapacityUnits: 100
         WriteCapacityUnits: 100
 
+  DependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: DingTalkDependencies
+      Description: DingTalk Dependencies Layer
+      ContentUri: 'build/deps'
+      CompatibleRuntimes:
+        - java8
+      LicenseInfo: 'Available under the MIT-0 license.'
+      RetentionPolicy: Retain
+
   CallbackFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: build/libs/dingtalk-callback-1.0.0-SNAPSHOT-all.jar
+      CodeUri: build/libs/dingtalk-callback-1.0.0-SNAPSHOT.jar
       Handler: com.github.zxkane.dingtalk.Callback::handleRequest
+      Layers:
+        - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref BPMTable
