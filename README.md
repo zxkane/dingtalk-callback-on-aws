@@ -46,6 +46,13 @@ sam deploy --template-file ./packaged.yaml \
     --stack-name my-dingtalk-callback --capabilities CAPABILITY_IAM
 ```
 
+####  Deploy via [serverless framework](https://serverless.com/)
+
+
+```bash
+sls deploy
+```
+
 #### Deploy via Code pipeline
 1. Put the github person token to `codepipeline.json`
 2. Set the s3 bucket name in `codepipeline.json` 

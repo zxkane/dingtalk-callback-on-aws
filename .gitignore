@@ -16,3 +16,4 @@ LOG_PATH_IS_UNDEFINED
 .kotlintest/
 *.yaml
 !template-sam.yaml
+.serverless/

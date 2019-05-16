@@ -1,0 +1,125 @@
+service:
+  name: dingtalk-callback
+
+frameworkVersion: ">=1.0.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: java8
+  stage: ${opt:stage, 'dev'} # Set the default stage used. Default is dev
+  region: ${opt:region, 'ap-southeast-1'} # Overwrite the default region used. Default is ap-southeast-1
+  stackName: dingtalk-callback-stack-${self:provider.stage} # Use a custom name for the CloudFormation stack
+  apiName: dingtalk-callback-api-${self:provider.stage} # Use a custom name for the API Gateway API
+  profile: ${opt:profile, 'default'} # The default profile to use with this service
+  memorySize: 1024 # Overwrite the default memory size. Default is 1024
+  timeout: 10 # The default is 6 seconds. Note: API Gateway current maximum is 30 seconds
+  logRetentionInDays: 14 # Set the default RetentionInDays for a CloudWatch LogGroup
+  deploymentPrefix: serverless # The S3 prefix under which deployed artifacts should be stored. Default is serverless
+  versionFunctions: true # Optional function versioning
+  endpointType: regional # Optional endpoint configuration for API Gateway REST API. Default is Edge.
+  logs:
+    restApi: true
+
+package:
+  individually: true
+
+functions:
+  dingtalk-callback:
+    handler: com.github.zxkane.dingtalk.Callback::handleRequest # required, handler set in AWS Lambda
+    name: ${self:provider.stage}-dingtalk-callback # optional, Deployed Lambda name
+    description: Callback of dingtalk # optional, Description to publish to AWS
+    memorySize: 384 # optional, in MB, default is 1024
+    timeout: 15 # optional, in seconds, default is 6
+    reservedConcurrency: 5 # optional, reserved concurrency limit for this function. By default, AWS uses account concurrency limit
+    tracing: PassThrough # optional, overwrite, can be 'Active' or 'PassThrough'
+    environment: # Function level environment variables
+      PARA_DD_TOKEN: DD_TOKEN
+      PARA_DD_AES_KEY: DD_AES_KEY
+      PARA_DD_CORPID: DD_CORPID
+      TABLE_NAME: {Ref: BPMTable}
+    package:
+      artifact: build/libs/dingtalk-callback-1.0.0-SNAPSHOT.jar
+    role: dingtalkCallbackIAMRole
+    layers: # An optional list Lambda Layers to use
+      - {Ref: DependenciesLambdaLayer}
+    events: # The Events that trigger this Function
+      - http: # This creates an API Gateway HTTP endpoint which can be used to trigger this function.  Learn more in "events/apigateway"
+          path: dingtalk # Path for this endpoint
+          method: post # HTTP method for this endpoint
+          cors: false # Turn on CORS for this endpoint, but don't forget to return the right header in your response
+          request:
+            parameters:
+              querystrings:
+                timestamp: true
+                nonce: true
+                signature: true
+
+
+layers:
+  dependencies:
+    path: build/deps
+    name: ${self:provider.stage}-dingtalk-callback-deps # optional, Deployed Lambda layer name
+    description: DingTalk Dependencies Layer # optional, Description to publish to AWS
+    compatibleRuntimes: # optional, a list of runtimes this layer is compatible with
+      - java8
+    licenseInfo: Available under the MIT-0 license. # optional, a string specifying license information
+    allowedAccounts: # optional, a list of AWS account IDs allowed to access this layer.
+      - '*'
+    # uncomment retain due to issue https://github.com/serverless/serverless/issues/6146
+    #retain: true # optional, false by default. If true, layer versions are not deleted as new ones are created
+
+
+resources:  # CloudFormation template syntax
+  Resources:
+    dingtalkCallbackIAMRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: SSMPolicy
+            PolicyDocument:
+              Version: '2012-10-17' # Policy Document
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - ssm:GetParameters
+                  Resource: 'arn:aws:ssm:*:*:parameter/DD_*' # align with below below keys stored in parameter store
+          - PolicyName: DynamoDBPolicy
+            PolicyDocument:
+              Version: '2012-10-17' # Policy Document
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:PutItem
+                    - dynamodb:Scan
+                    - dynamodb:Query
+                    - dynamodb:UpdateItem
+                    - dynamodb:BatchWriteItem
+                    - dynamodb:BatchGetItem
+                    - dynamodb:DescribeTable
+                  Resource:
+                    - arn:aws:dynamodb:${self:provider.region}:*:table/bpm_raw_${self:service.name}_${self:provider.stage}
+                    - arn:aws:dynamodb:${self:provider.region}:*:table/bpm_raw_${self:service.name}_${self:provider.stage}/index/*
+    BPMTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: bpm_raw_${self:service.name}_${self:provider.stage}
+        KeySchema:
+          - AttributeName: processInstanceId
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: processInstanceId
+            AttributeType: S
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
