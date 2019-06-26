@@ -4,18 +4,15 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import com.amazonaws.services.dynamodbv2.document.DynamoDB
 import com.amazonaws.services.dynamodbv2.document.Item
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec
-import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.dingtalk.oapi.lib.aes.DingTalkEncryptor
 import com.dingtalk.oapi.lib.aes.Utils
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import org.apache.commons.codec.binary.Base64
 import org.apache.logging.log4j.LogManager
+import org.springframework.messaging.Message
 import software.amazon.awssdk.services.ssm.SsmClient
 import software.amazon.awssdk.services.ssm.model.GetParametersRequest
 import software.amazon.awssdk.services.ssm.model.Parameter
@@ -36,11 +33,10 @@ const val TABLE_NAME = "TABLE_NAME"
 const val RESPONSE_MSG = "success"
 
 const val NONCE_LENGTH = 12
-const val STATUS_CODE = 200
 
 val objectMapper = ObjectMapper().registerModules(JavaTimeModule()).registerKotlinModule()
 
-class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) {
 
     companion object {
 
@@ -60,7 +56,8 @@ class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : Reque
         val dingtalkParameters = ssmClient.getParameters(GetParametersRequest.builder().names(
             System.getenv(TOKEN_NAME),
             System.getenv(AES_KEY_NAME),
-            System.getenv(CORPID_NAME)).withDecryption(true).build()).parameters()
+            System.getenv(CORPID_NAME))
+            .withDecryption(true).build()).parameters()
          dingTalkEncryptor = DingTalkEncryptor(
              getParameter(dingtalkParameters, System.getenv(TOKEN_NAME)),
              getParameter(dingtalkParameters, System.getenv(AES_KEY_NAME)),
@@ -71,20 +68,19 @@ class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : Reque
         return parameters.first { p -> p.name() == name }.value()
     }
 
-    override fun handleRequest(request: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
+    fun handleRequest(request: Message<EncryptedEvent>): Map<String, String> {
         logger.debug("Callback request is $request")
 
-        val encryptedEvent = objectMapper.readValue<EncryptedEvent>(
-            if (request.isBase64Encoded) String(Base64.decodeBase64(request.body)) else request.body,
-            EncryptedEvent::class.java
-        )
+        val encryptedEvent = request.payload
 
         logger.debug("Encrypted callback event is $encryptedEvent.")
 
+        val apiEvent = request.headers.get("request") as APIGatewayProxyRequestEvent
+
         val eventJson = dingTalkEncryptor.getDecryptMsg(
-            request.queryStringParameters.get(QUERY_PARAMETER_SIGNATURE),
-            request.queryStringParameters.get(QUERY_PARAMETER_TIMESTAMP),
-            request.queryStringParameters.get(QUERY_PARAMETER_NONCE),
+            apiEvent.queryStringParameters.get(QUERY_PARAMETER_SIGNATURE).toString(),
+            apiEvent.queryStringParameters.get(QUERY_PARAMETER_TIMESTAMP),
+            apiEvent.queryStringParameters.get(QUERY_PARAMETER_NONCE).toString(),
             encryptedEvent.encrypt)
 
         logger.debug("Event json is $eventJson.")
@@ -114,10 +110,7 @@ class Callback(dynamoDb: DynamoDB? = null, ssmclient: SsmClient? = null) : Reque
 
         logger.debug("Callback response is $response.")
 
-        return APIGatewayProxyResponseEvent()
-            .withBody(objectMapper.writeValueAsString(response))
-            .withHeaders(mapOf("content-type" to "application/json"))
-            .withStatusCode(STATUS_CODE)
+        return response
     }
 
     fun serializeEvent(event: Event) {

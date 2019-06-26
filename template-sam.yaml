@@ -10,7 +10,7 @@ Globals:
   Function:
     Runtime: java8
     Timeout: 29
-    MemorySize: 384
+    MemorySize: 512
 
 Resources:
   BPMTable:
@@ -43,7 +43,7 @@ Resources:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: build/libs/dingtalk-callback-1.0.0-SNAPSHOT.jar
-      Handler: com.github.zxkane.dingtalk.Callback::handleRequest
+      Handler: com.github.zxkane.dingtalk.Handler::handleRequest
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -61,6 +61,8 @@ Resources:
           PARA_DD_AES_KEY: DD_AES_KEY
           PARA_DD_CORPID: DD_CORPID
           TABLE_NAME: !Ref BPMTable
+          MAIN_CLASS: com.github.zxkane.dingtalk.DingtalkCallbackApplication
+          FUNCTION_NAME: dingtalkCallback
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api

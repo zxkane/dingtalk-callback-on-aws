@@ -25,11 +25,11 @@ package:
 
 functions:
   dingtalk-callback:
-    handler: com.github.zxkane.dingtalk.Callback::handleRequest # required, handler set in AWS Lambda
+    handler: com.github.zxkane.dingtalk.Handler::handleRequest # required, handler set in AWS Lambda
     name: ${self:provider.stage}-dingtalk-callback # optional, Deployed Lambda name
     description: Callback of dingtalk # optional, Description to publish to AWS
-    memorySize: 384 # optional, in MB, default is 1024
-    timeout: 15 # optional, in seconds, default is 6
+    memorySize: 512 # optional, in MB, default is 1024
+    timeout: 90 # optional, in seconds, default is 6
     reservedConcurrency: 5 # optional, reserved concurrency limit for this function. By default, AWS uses account concurrency limit
     tracing: PassThrough # optional, overwrite, can be 'Active' or 'PassThrough'
     environment: # Function level environment variables
@@ -37,6 +37,8 @@ functions:
       PARA_DD_AES_KEY: DD_AES_KEY
       PARA_DD_CORPID: DD_CORPID
       TABLE_NAME: {Ref: BPMTable}
+      MAIN_CLASS: com.github.zxkane.dingtalk.DingtalkCallbackApplication
+      FUNCTION_NAME: dingtalkCallback
     package:
       artifact: build/libs/dingtalk-callback-1.0.0-SNAPSHOT.jar
     role: dingtalkCallbackIAMRole

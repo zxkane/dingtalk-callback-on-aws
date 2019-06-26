@@ -10,6 +10,8 @@ val kotlinTestVersion = "3.3.1"
 val junit5Version = "5.4.0"
 val jacksonVersion = "2.9.7"
 
+val springCloudFunctionVersion = "2.1.1.RELEASE"
+
 plugins {
     val kotlinVersion = "1.3.21"
     val detektVersion = "1.0.0-RC14"
@@ -89,6 +91,8 @@ dependencies {
     implementation("software.amazon.awssdk:ssm")
     implementation("org.slf4j:slf4j-simple:1.7.25")
     implementation("com.amazonaws:aws-java-sdk-dynamodb:1.11.519")
+
+    implementation("org.springframework.cloud:spring-cloud-function-adapter-aws:${springCloudFunctionVersion}")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junit5Version}")
     testRuntime("org.junit.jupiter:junit-jupiter-engine:${junit5Version}")
