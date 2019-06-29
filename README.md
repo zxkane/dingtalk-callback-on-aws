@@ -84,3 +84,7 @@ curl -X POST \
 }' 
 
 ```
+
+### Spring Cloud Function version
+
+I also port this lambda function to use [Spring Cloud Function](https://spring.io/projects/spring-cloud-function) as lambda framework, you can checkout [this branch](https://github.com/zxkane/dingtalk-callback-on-aws/tree/spring-cloud-function) if your're interested.
