@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/zxkane/dingtalk-callback-on-aws.svg?branch=master)](https://travis-ci.org/zxkane/dingtalk-callback-on-aws)
 
+> This is a version powered by [Spring Cloud Function](https://spring.io/projects/spring-cloud-function). If you're interested in more details, check [this article](https://kane.mx/posts/effective-cloud-computing/spring-cloud-function-for-aws/).
+
 The program provides a HTTP API endpoint to receive kinds of dingtalk callback events and persist them in AWS DynamoDB, including `BPM events`, `Organization events` and so on.
 
 It is written by Kotlin and leverages below AWS services,
